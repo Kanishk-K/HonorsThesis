@@ -27,7 +27,6 @@ func NewLoader(filename string) *Loader {
 				singleton = nil
 				return nil
 			}
-			log.Println("Loader initialized with filename:", filename)
 		} else {
 			log.Println("Loader already initialized")
 		}
