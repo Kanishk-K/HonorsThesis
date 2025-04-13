@@ -19,4 +19,7 @@ type AIModelDefinition struct {
 	StdDevRunTime float64 `json:"std_dev_run_time"` // in seconds
 	EnergyUsage   float64 `json:"energy_usage"`     // in mWh
 	SLOThreshold  float64 `json:"slo_threshold"`    // in seconds
+
+	NumberOfRuns   int    `json:"number_of_runs"`  // number of runs for the model
+	WorkloadPolicy string `json:"workload_policy"` // workload algorithm
 }

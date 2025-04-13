@@ -4,6 +4,8 @@
     "mean_run_time": 72,
     "std_dev_run_time": 5,
     "energy_usage": 50,
-    "slo_threshold": 100
+    "slo_threshold": 100,
+    "number_of_runs": 10,
+    "workload_policy": "uniform"
   }
 }

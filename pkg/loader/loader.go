@@ -36,6 +36,14 @@ func NewLoader(filename string) *Loader {
 	return singleton
 }
 
+func GetLoader() *Loader {
+	if singleton == nil {
+		log.Println("Loader not initialized")
+		return nil
+	}
+	return singleton
+}
+
 func (l *Loader) loadFromFile() error {
 	// Implement your file loading logic here
 	log.Println("Loading from file:", l.filename)
@@ -103,4 +111,19 @@ func (l *Loader) GetIntentsityByDate(date time.Time) (*DataPoint, error) {
 		return nil, fmt.Errorf("no data found for date")
 	}
 	return l.data[right], nil
+}
+
+func (l *Loader) NumEntries() int {
+	return l.numEntries
+}
+
+func (l *Loader) StartDate() time.Time {
+	return l.startDate
+}
+
+func (l *Loader) EndDate() time.Time {
+	if l.numEntries == 0 {
+		return time.Time{}
+	}
+	return l.data[l.numEntries-1].StartDate.Add(5 * time.Minute)
 }
