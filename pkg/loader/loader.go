@@ -1,0 +1,107 @@
+package loader
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"sync"
+	"time"
+
+	"github.com/gocarina/gocsv"
+)
+
+var lock = &sync.Mutex{}
+var singleton *Loader
+
+func NewLoader(filename string) *Loader {
+	if singleton == nil {
+		lock.Lock()
+		defer lock.Unlock()
+		if singleton == nil {
+			singleton = &Loader{
+				filename: filename,
+			}
+			err := singleton.loadFromFile()
+			if err != nil {
+				log.Println("Error loading from file:", err)
+				singleton = nil
+				return nil
+			}
+			log.Println("Loader initialized with filename:", filename)
+		} else {
+			log.Println("Loader already initialized")
+		}
+	} else {
+		log.Println("Loader already initialized")
+	}
+	return singleton
+}
+
+func (l *Loader) loadFromFile() error {
+	// Implement your file loading logic here
+	log.Println("Loading from file:", l.filename)
+	dataFile, err := os.OpenFile(l.filename, os.O_RDONLY, 0644)
+	if err != nil {
+		log.Println("Error opening file:", err)
+		return err
+	}
+	defer dataFile.Close()
+	if err := gocsv.UnmarshalFile(dataFile, &l.data); err != nil {
+		log.Println("Error unmarshalling file:", err)
+		return err
+	}
+	l.numEntries = len(l.data)
+	if l.numEntries == 0 {
+		log.Println("No data found in file")
+		return fmt.Errorf("no data found in file")
+	}
+	l.startDate = l.data[0].StartDate
+	log.Println("Data loaded successfully, number of entries:", l.numEntries)
+	return nil
+}
+
+func (l *Loader) String() string {
+	return "Loader for filename: " + l.filename
+}
+
+func (l *Loader) PrintAllData() error {
+	if l.numEntries == 0 {
+		return fmt.Errorf("no data to print")
+	}
+	for _, dataPoint := range l.data {
+		fmt.Printf("StartDate: %s, CarbonIntensity: %f\n", dataPoint.StartDate.Format("2006-01-02 03:04 PM"), dataPoint.CarbonIntensity)
+	}
+	return nil
+}
+
+func (l *Loader) GetIntentsityByDate(date time.Time) (*DataPoint, error) {
+	// Check if the loader is initialized
+	if l.numEntries == 0 {
+		return nil, fmt.Errorf("no data available")
+	}
+	// If the date is before the start date or after the last date in the data, return an error
+	// The last date is the start date of the last entry + 5 minutes
+	if date.Before(l.startDate) || date.After(l.data[l.numEntries-1].StartDate.Add(5*time.Minute)) {
+		return nil, fmt.Errorf("date out of range")
+	}
+	// Entries are sorted by date we can binary search for the date
+	// We are NOT guarenteed that every date is present in the data
+	// So we need to find the closest date
+	// If the exact date is not found, use the closest PREVIOUS date
+	left, right := 0, l.numEntries-1
+	for left <= right {
+		mid := (left + right) / 2
+		if l.data[mid].StartDate.Equal(date) {
+			return l.data[mid], nil
+		} else if l.data[mid].StartDate.Before(date) {
+			left = mid + 1
+		} else {
+			right = mid - 1
+		}
+	}
+	// If we reach here, the date is not found, return the closest previous date
+	if right < 0 {
+		return nil, fmt.Errorf("no data found for date")
+	}
+	return l.data[right], nil
+}
