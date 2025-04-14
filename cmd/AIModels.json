@@ -6,6 +6,6 @@
     "energy_usage": 50,
     "slo_threshold": 100,
     "number_of_runs": 10,
-    "workload_policy": "uniform"
+    "workload_policy": "weekendSpike"
   }
 }
