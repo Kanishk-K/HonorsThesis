@@ -97,7 +97,6 @@ class DataAquisitionBase(AbstractDataAquisition):
             ) for d in data["data"]]
             dfs.append(pd.DataFrame(date_df, columns=["start_date", "generated_rate_kg_per_mwh"]))
         self.df = pd.concat(dfs, ignore_index=True)
-        self.df["ISO"] = self.ISO
 
     
     def writeToFile(self, file_path):
