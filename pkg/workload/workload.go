@@ -37,7 +37,7 @@ func GetModelWorkload(model *directory.AIModelDefinition) Workload {
 		workload = NewWeekdaySpikeWorkload(0.8, 0.2)
 	case "weekendSpike":
 		// Assigns jobs to weekends
-		workload = NewWeekendSpikeWorkload(1, 0)
+		workload = NewWeekendSpikeWorkload(0.8, 0.2)
 	default:
 		panic("Unknown workload policy: " + policy)
 	}

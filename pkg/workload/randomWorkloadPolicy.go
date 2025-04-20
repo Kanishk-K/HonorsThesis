@@ -5,14 +5,13 @@ import (
 	"math/rand"
 	"simulator/pkg/directory"
 	"simulator/pkg/loader"
-	"slices"
 	"time"
 )
 
 type RandomWorkload struct{}
 
 // GenerateWorkload generates a random workload for the given model using the loader's data.
-func (rw *RandomWorkload) GenerateWorkload(model *directory.AIModelDefinition) ([]Job, error) {
+func (rw *RandomWorkload) GenerateWorkload(model *directory.AIModelDefinition) ([]*Job, error) {
 	loader := loader.GetLoader()
 	if loader == nil {
 		return nil, fmt.Errorf("loader is not initialized")
@@ -20,7 +19,7 @@ func (rw *RandomWorkload) GenerateWorkload(model *directory.AIModelDefinition) (
 
 	// Define the number of jobs to generate based on the model's NumberOfRuns
 	numJobs := model.NumberOfRuns
-	jobList := make([]Job, numJobs)
+	jobList := make([]*Job, numJobs)
 
 	// Generate jobs randomly within the loader's data range
 	for index := range numJobs {
@@ -34,7 +33,7 @@ func (rw *RandomWorkload) GenerateWorkload(model *directory.AIModelDefinition) (
 			duration = time.Second // Ensure duration is positive
 		}
 
-		job := Job{
+		job := &Job{
 			Model:     model,
 			StartTime: startTime,
 			DueTime:   startTime.Add(time.Duration(model.SLOThreshold) * time.Second),
@@ -43,7 +42,6 @@ func (rw *RandomWorkload) GenerateWorkload(model *directory.AIModelDefinition) (
 		jobList[index] = job
 	}
 	// Sort jobs by start time
-	slices.SortFunc(jobList, func(a, b Job) int { return a.StartTime.Compare(b.StartTime) })
 	return jobList, nil
 }
 

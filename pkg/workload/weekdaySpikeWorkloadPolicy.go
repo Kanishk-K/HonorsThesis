@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"simulator/pkg/directory"
 	"simulator/pkg/loader"
-	"slices"
 	"time"
 )
 
@@ -23,7 +22,7 @@ func NewWeekdaySpikeWorkload(percentOn, percentOff float64) *WeekdaySpikeWorkloa
 	}
 }
 
-func (ws *WeekdaySpikeWorkload) GenerateWorkload(model *directory.AIModelDefinition) ([]Job, error) {
+func (ws *WeekdaySpikeWorkload) GenerateWorkload(model *directory.AIModelDefinition) ([]*Job, error) {
 	loader := loader.GetLoader()
 	if loader == nil {
 		panic("Loader is not initialized")
@@ -40,7 +39,7 @@ func (ws *WeekdaySpikeWorkload) GenerateWorkload(model *directory.AIModelDefinit
 	}
 	numOffSpike := model.NumberOfRuns - numsOnSpike
 
-	jobList := make([]Job, model.NumberOfRuns)
+	jobList := make([]*Job, model.NumberOfRuns)
 	startDate := loader.StartDate()
 	endDate := loader.EndDate().Add(-time.Duration(model.SLOThreshold) * time.Second)
 
@@ -51,7 +50,7 @@ func (ws *WeekdaySpikeWorkload) GenerateWorkload(model *directory.AIModelDefinit
 		if duration < 0 {
 			duration = time.Second
 		}
-		jobList[i] = Job{
+		jobList[i] = &Job{
 			Model:     model,
 			StartTime: startTime,
 			DueTime:   startTime.Add(time.Duration(model.SLOThreshold) * time.Second),
@@ -64,13 +63,12 @@ func (ws *WeekdaySpikeWorkload) GenerateWorkload(model *directory.AIModelDefinit
 		if duration < 0 {
 			duration = time.Second
 		}
-		jobList[numsOnSpike+i] = Job{
+		jobList[numsOnSpike+i] = &Job{
 			Model:     model,
 			StartTime: startTime,
 			DueTime:   startTime.Add(time.Duration(model.SLOThreshold) * time.Second),
 			Duration:  duration,
 		}
 	}
-	slices.SortFunc(jobList, func(a, b Job) int { return a.StartTime.Compare(b.StartTime) })
 	return jobList, nil
 }

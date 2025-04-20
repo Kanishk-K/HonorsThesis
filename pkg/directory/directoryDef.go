@@ -6,6 +6,7 @@ type DirectoryInterface interface {
 	// Public methods
 	String() string
 	GetModelDefinition(modelName string) (*AIModelDefinition, error)
+	GetModels() map[string]AIModelDefinition
 }
 
 type Directory struct {

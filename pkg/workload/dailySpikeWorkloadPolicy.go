@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"simulator/pkg/directory"
 	"simulator/pkg/loader"
-	"slices"
 	"time"
 )
 
@@ -55,7 +54,7 @@ func NewNightSpikeWorkload(percentOn, percentOff float64) *SpikeWorkload {
 }
 
 // GenerateWorkload generates a workload with spikes during the specified time range.
-func (sp *SpikeWorkload) GenerateWorkload(model *directory.AIModelDefinition) ([]Job, error) {
+func (sp *SpikeWorkload) GenerateWorkload(model *directory.AIModelDefinition) ([]*Job, error) {
 	loader := loader.GetLoader()
 	if loader == nil {
 		return nil, fmt.Errorf("loader is not initialized")
@@ -75,7 +74,7 @@ func (sp *SpikeWorkload) GenerateWorkload(model *directory.AIModelDefinition) ([
 	numOffSpike := model.NumberOfRuns - numOnSpike
 
 	numJobs := model.NumberOfRuns
-	jobList := make([]Job, numJobs)
+	jobList := make([]*Job, numJobs)
 
 	startDate := loader.StartDate()
 	endDate := loader.EndDate().Add(-time.Duration(model.SLOThreshold) * time.Second)
@@ -89,7 +88,7 @@ func (sp *SpikeWorkload) GenerateWorkload(model *directory.AIModelDefinition) ([
 			duration = time.Second // Ensure duration is positive
 		}
 
-		job := Job{
+		job := &Job{
 			Model:     model,
 			StartTime: startTime,
 			DueTime:   startTime.Add(time.Duration(model.SLOThreshold) * time.Second),
@@ -105,7 +104,7 @@ func (sp *SpikeWorkload) GenerateWorkload(model *directory.AIModelDefinition) ([
 		if duration < 0 {
 			duration = time.Second // Ensure duration is positive
 		}
-		job := Job{
+		job := &Job{
 			Model:     model,
 			StartTime: startTime,
 			DueTime:   startTime.Add(time.Duration(model.SLOThreshold) * time.Second),
@@ -113,6 +112,5 @@ func (sp *SpikeWorkload) GenerateWorkload(model *directory.AIModelDefinition) ([
 		}
 		jobList[numOnSpike+i] = job
 	}
-	slices.SortFunc(jobList, func(a, b Job) int { return a.StartTime.Compare(b.StartTime) })
 	return jobList, nil
 }

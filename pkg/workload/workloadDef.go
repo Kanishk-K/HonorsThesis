@@ -6,7 +6,7 @@ import (
 )
 
 type PolicyInterface interface {
-	GenerateWorkload(model *directory.AIModelDefinition) ([]Job, error)
+	GenerateWorkload(model *directory.AIModelDefinition) ([]*Job, error)
 }
 
 // Defines the various workloads that can be used in the simulation.
@@ -14,7 +14,7 @@ type Workload struct {
 	// The model this workload is associated with.
 	Model *directory.AIModelDefinition
 	// The associated jobs for this workload.
-	Jobs []Job
+	Jobs []*Job
 	// The policy used to generate the workload.
 	Policy PolicyInterface
 }

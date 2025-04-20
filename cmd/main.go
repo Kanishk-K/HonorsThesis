@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"simulator/pkg/directory"
 	"simulator/pkg/loader"
-	"simulator/pkg/workload"
+	"simulator/pkg/simulator"
 )
 
 func main() {
@@ -16,21 +16,28 @@ func main() {
 		fmt.Println("Error getting current directory:", err)
 		return
 	}
+	/*
+		Load in carbon emission data
+	*/
 	dataPath := filepath.Join(currDir, "..", "data", "collected", "MISO.csv")
 	dataLoader := loader.NewLoader(dataPath)
 	log.Println(dataLoader)
 
+	/*
+		Load in AI Model Definitions & Workload information
+	*/
 	modelPath := filepath.Join(currDir, "..", "cmd", "AIModels.json")
-	modelDirectory := directory.NewDirectory(modelPath)
+	_ = directory.NewDirectory(modelPath)
 
-	modelDef, err := modelDirectory.GetModelDefinition("gpt-3.5-turbo")
-	if err != nil {
-		fmt.Println("Error getting model definition:", err)
+	/*
+		Generate and load in workload information
+	*/
+	wlq := simulator.CreateWorkloadQueue()
+	if wlq == nil {
+		log.Println("Failed to create workload queue")
 		return
 	}
-
-	workload := workload.GetModelWorkload(modelDef)
-	for _, job := range workload.Jobs {
-		fmt.Printf("Job: StartTime=%s, DueTime=%s, Duration=%s\n", job.StartTime, job.DueTime, job.Duration)
+	for _, job := range wlq {
+		log.Println(*job)
 	}
 }

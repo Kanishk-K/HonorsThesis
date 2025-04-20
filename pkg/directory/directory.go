@@ -36,6 +36,14 @@ func NewDirectory(filename string) *Directory {
 	return singleton
 }
 
+func FetchDirectory() *Directory {
+	if singleton == nil {
+		log.Println("Directory not initialized. Call NewDirectory first.")
+		return nil
+	}
+	return singleton
+}
+
 func (d *Directory) loadFromFile() error {
 	// Load models from a JSON file
 	jsonFile, err := os.Open(d.filename)
@@ -66,4 +74,8 @@ func (d *Directory) GetModelDefinition(modelName string) (*AIModelDefinition, er
 	} else {
 		return nil, fmt.Errorf("model %s not found", modelName)
 	}
+}
+
+func (d *Directory) GetModels() map[string]AIModelDefinition {
+	return d.models
 }
