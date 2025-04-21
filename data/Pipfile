@@ -8,6 +8,7 @@ pandas = "*"
 requests = "*"
 python-dotenv = "*"
 matplotlib = "*"
+seaborn = "*"
 
 [dev-packages]
 
