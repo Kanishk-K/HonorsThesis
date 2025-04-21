@@ -3,19 +3,25 @@ package workload
 import (
 	"math"
 	"math/rand"
-	"simulator/pkg/directory"
 	"simulator/pkg/loader"
 	"time"
 )
 
-func GetModelWorkload(model *directory.AIModelDefinition) Workload {
+func NewJobInfo(dueTime time.Duration, numJobs int, workloadPolicy string) JobMetadata {
+	return JobMetadata{
+		DueTime:        dueTime,
+		NumJobs:        numJobs,
+		WorkloadPolicy: workloadPolicy,
+	}
+}
+
+func GetWorkload(jobInfo JobMetadata) Workload {
 	loader := loader.GetLoader()
 	if loader == nil {
 		panic("Loader is not initialized")
 	}
-	policy := model.WorkloadPolicy
 	var workload PolicyInterface
-	switch policy {
+	switch jobInfo.WorkloadPolicy {
 	case "random":
 		workload = &RandomWorkload{}
 	case "uniform":
@@ -39,15 +45,14 @@ func GetModelWorkload(model *directory.AIModelDefinition) Workload {
 		// Assigns jobs to weekends
 		workload = NewWeekendSpikeWorkload(0.8, 0.2)
 	default:
-		panic("Unknown workload policy: " + policy)
+		panic("Unknown workload policy: " + jobInfo.WorkloadPolicy)
 	}
 
-	jobs, err := workload.GenerateWorkload(model)
+	jobs, err := workload.GenerateWorkload(jobInfo)
 	if err != nil {
 		panic("Failed to generate workload: " + err.Error())
 	}
 	return Workload{
-		Model:  model,
 		Policy: workload,
 		Jobs:   jobs,
 	}

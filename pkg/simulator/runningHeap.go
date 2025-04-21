@@ -10,7 +10,7 @@ func (pq PriorityQueue) Len() int {
 
 func (pq PriorityQueue) Less(i, j int) bool {
 	// We want to return the lowest (starttime + duration) first
-	return pq[i].StartTime.Add(pq[i].Duration).Before(pq[j].StartTime.Add(pq[j].Duration))
+	return pq[i].StartTime.Add(*pq[i].Duration).Before(pq[j].StartTime.Add(*pq[j].Duration))
 }
 
 func (pq PriorityQueue) Swap(i, j int) {

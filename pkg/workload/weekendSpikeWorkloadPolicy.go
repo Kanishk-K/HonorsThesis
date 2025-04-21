@@ -4,11 +4,8 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"math/rand"
-	"simulator/pkg/directory"
 	"simulator/pkg/loader"
 	"slices"
-	"time"
 )
 
 type WeekendSpikeWorkload struct {
@@ -23,7 +20,7 @@ func NewWeekendSpikeWorkload(percentOn, percentOff float64) *WeekendSpikeWorkloa
 	}
 }
 
-func (ws *WeekendSpikeWorkload) GenerateWorkload(model *directory.AIModelDefinition) ([]*Job, error) {
+func (ws *WeekendSpikeWorkload) GenerateWorkload(jobInfo JobMetadata) ([]*Job, error) {
 	loader := loader.GetLoader()
 	if loader == nil {
 		panic("Loader is not initialized")
@@ -31,44 +28,37 @@ func (ws *WeekendSpikeWorkload) GenerateWorkload(model *directory.AIModelDefinit
 	if loader.NumEntries() == 0 {
 		panic("No entries in the loader")
 	}
-	numsOnSpike := int(math.Round(float64(model.NumberOfRuns) * ws.PercentOn))
+	numJobs := jobInfo.NumJobs
+	numsOnSpike := int(math.Round(float64(numJobs) * ws.PercentOn))
 	if numsOnSpike == 0 {
 		return nil, fmt.Errorf("no jobs generated for the spike period")
 	}
-	if numsOnSpike > model.NumberOfRuns {
-		numsOnSpike = model.NumberOfRuns
+	if numsOnSpike > numJobs {
+		numsOnSpike = numJobs
 	}
-	numOffSpike := model.NumberOfRuns - numsOnSpike
+	numOffSpike := numJobs - numsOnSpike
 
-	jobList := make([]*Job, model.NumberOfRuns)
+	jobList := make([]*Job, numJobs)
 	startDate := loader.StartDate()
-	endDate := loader.EndDate().Add(-time.Duration(model.SLOThreshold) * time.Second)
+	endDate := loader.EndDate().Add(-jobInfo.DueTime)
 
 	log.Printf("Putting %d jobs in the weekend spike period and %d jobs in the off-peak period\n", numsOnSpike, numOffSpike)
 	for i := range numsOnSpike {
 		startTime := getWeekendInRange(startDate, endDate)
-		duration := time.Duration(rand.NormFloat64()*model.StdDevRunTime+model.MeanRunTime) * time.Second
-		if duration < 0 {
-			duration = time.Second
-		}
 		jobList[i] = &Job{
-			Model:     model,
+			Model:     nil,
 			StartTime: startTime,
-			DueTime:   startTime.Add(time.Duration(model.SLOThreshold) * time.Second),
-			Duration:  duration,
+			DueTime:   startTime.Add(jobInfo.DueTime),
+			Duration:  nil,
 		}
 	}
 	for i := range numOffSpike {
 		startTime := getWeekdayInRange(startDate, endDate)
-		duration := time.Duration(rand.NormFloat64()*model.StdDevRunTime+model.MeanRunTime) * time.Second
-		if duration < 0 {
-			duration = time.Second
-		}
 		jobList[numsOnSpike+i] = &Job{
-			Model:     model,
+			Model:     nil,
 			StartTime: startTime,
-			DueTime:   startTime.Add(time.Duration(model.SLOThreshold) * time.Second),
-			Duration:  duration,
+			DueTime:   startTime.Add(jobInfo.DueTime),
+			Duration:  nil,
 		}
 	}
 	slices.SortFunc(jobList, func(a, b *Job) int {

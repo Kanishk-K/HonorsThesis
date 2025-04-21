@@ -4,11 +4,8 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"math/rand"
-	"simulator/pkg/directory"
 	"simulator/pkg/loader"
 	"slices"
-	"time"
 )
 
 type SpikeWorkload struct {
@@ -55,7 +52,7 @@ func NewNightSpikeWorkload(percentOn, percentOff float64) *SpikeWorkload {
 }
 
 // GenerateWorkload generates a workload with spikes during the specified time range.
-func (sp *SpikeWorkload) GenerateWorkload(model *directory.AIModelDefinition) ([]*Job, error) {
+func (sp *SpikeWorkload) GenerateWorkload(jobInfo JobMetadata) ([]*Job, error) {
 	loader := loader.GetLoader()
 	if loader == nil {
 		return nil, fmt.Errorf("loader is not initialized")
@@ -65,35 +62,31 @@ func (sp *SpikeWorkload) GenerateWorkload(model *directory.AIModelDefinition) ([
 		return nil, fmt.Errorf("no data available in loader")
 	}
 
-	numOnSpike := int(math.Ceil(float64(model.NumberOfRuns) * sp.PercentOn))
+	numJobs := jobInfo.NumJobs
+	numOnSpike := int(math.Ceil(float64(numJobs) * sp.PercentOn))
 	if numOnSpike == 0 {
 		return nil, fmt.Errorf("no jobs to generate")
 	}
-	if numOnSpike > model.NumberOfRuns {
-		numOnSpike = model.NumberOfRuns
+	if numOnSpike > numJobs {
+		numOnSpike = numJobs
 	}
-	numOffSpike := model.NumberOfRuns - numOnSpike
+	numOffSpike := numJobs - numOnSpike
 
-	numJobs := model.NumberOfRuns
 	jobList := make([]*Job, numJobs)
 
 	startDate := loader.StartDate()
-	endDate := loader.EndDate().Add(-time.Duration(model.SLOThreshold) * time.Second)
+	endDate := loader.EndDate().Add(-jobInfo.DueTime)
 
 	log.Printf("Putting %d jobs in the morning spike period and %d jobs in the off-peak period\n", numOnSpike, numOffSpike)
 	// Assign jobs during the spike period (5 AM to 12 PM)
 	for i := range numOnSpike {
 		startTime := getStartTimeInRange(startDate, endDate, sp.TimeOn, sp.TimeOff)
-		duration := time.Duration(rand.NormFloat64()*model.StdDevRunTime+model.MeanRunTime) * time.Second
-		if duration < 0 {
-			duration = time.Second // Ensure duration is positive
-		}
 
 		job := &Job{
-			Model:     model,
+			Model:     nil,
 			StartTime: startTime,
-			DueTime:   startTime.Add(time.Duration(model.SLOThreshold) * time.Second),
-			Duration:  duration,
+			DueTime:   startTime.Add(jobInfo.DueTime),
+			Duration:  nil,
 		}
 		jobList[i] = job
 	}
@@ -101,15 +94,11 @@ func (sp *SpikeWorkload) GenerateWorkload(model *directory.AIModelDefinition) ([
 	// Assign jobs during the off-peak period (12 PM to 5 AM)
 	for i := range numOffSpike {
 		startTime := getStartTimeInRange(startDate, endDate, sp.TimeOff, sp.TimeOn)
-		duration := time.Duration(rand.NormFloat64()*model.StdDevRunTime+model.MeanRunTime) * time.Second
-		if duration < 0 {
-			duration = time.Second // Ensure duration is positive
-		}
 		job := &Job{
-			Model:     model,
+			Model:     nil,
 			StartTime: startTime,
-			DueTime:   startTime.Add(time.Duration(model.SLOThreshold) * time.Second),
-			Duration:  duration,
+			DueTime:   startTime.Add(jobInfo.DueTime),
+			Duration:  nil,
 		}
 		jobList[numOnSpike+i] = job
 	}

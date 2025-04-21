@@ -2,8 +2,6 @@ package workload
 
 import (
 	"fmt"
-	"math/rand"
-	"simulator/pkg/directory"
 	"simulator/pkg/loader"
 	"time"
 )
@@ -11,7 +9,7 @@ import (
 type UniformWorkload struct{}
 
 // GenerateWorkload generates a uniform workload for the given model using the loader's data.
-func (uw *UniformWorkload) GenerateWorkload(model *directory.AIModelDefinition) ([]*Job, error) {
+func (uw *UniformWorkload) GenerateWorkload(jobInfo JobMetadata) ([]*Job, error) {
 	loader := loader.GetLoader()
 	if loader == nil {
 		return nil, fmt.Errorf("loader is not initialized")
@@ -22,29 +20,27 @@ func (uw *UniformWorkload) GenerateWorkload(model *directory.AIModelDefinition) 
 	}
 
 	// Define the number of jobs to generate based on the model's NumberOfRuns
-	numJobs := model.NumberOfRuns
-	jobList := make([]*Job, numJobs)
+	jobList := make([]*Job, jobInfo.NumJobs)
 
 	// Calculate the time interval between jobs
 	startDate := loader.StartDate()
-	endDate := loader.EndDate().Add(-time.Duration(model.SLOThreshold) * time.Second)
+	endDate := loader.EndDate().Add(-jobInfo.DueTime)
 	totalDuration := endDate.Sub(startDate)
 	if totalDuration <= 0 {
 		return nil, fmt.Errorf("invalid loader date range")
 	}
 
-	interval := totalDuration / time.Duration(numJobs)
+	interval := totalDuration / time.Duration(jobInfo.NumJobs)
 
 	// Generate jobs uniformly spaced within the loader's data range
-	for index := range numJobs {
+	for index := range jobInfo.NumJobs {
 		startTime := startDate.Add(time.Duration(index) * interval)
-		duration := time.Duration(rand.NormFloat64()*model.StdDevRunTime+model.MeanRunTime) * time.Second
 
 		job := &Job{
-			Model:     model,
+			Model:     nil,
 			StartTime: startTime,
-			DueTime:   startTime.Add(time.Duration(model.SLOThreshold) * time.Second),
-			Duration:  duration,
+			DueTime:   startTime.Add(jobInfo.DueTime),
+			Duration:  nil,
 		}
 		jobList[index] = job
 	}
