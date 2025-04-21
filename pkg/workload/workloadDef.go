@@ -21,7 +21,7 @@ type Job struct {
 	Model     *directory.AIModelDefinition // The model this job is associated with.
 	StartTime time.Time                    // When the job is queued
 	DueTime   time.Time                    // When the job is due before SLO violation
-	EndTime   *time.Time                   // How long the job will take to run
+	EndTime   time.Time                    // How long the job will take to run
 }
 
 type JobMetadata struct {

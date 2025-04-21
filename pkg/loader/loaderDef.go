@@ -9,7 +9,7 @@ type LoaderInterface interface {
 	// Public Methods
 	String() string
 	PrintAllData() error
-	GetIntentsityByDate(date time.Time) (float64, error)
+	GetIndexByDate(date time.Time) (int, error)
 	NumEntries() int
 	StartDate() time.Time
 	EndDate() time.Time
@@ -17,9 +17,9 @@ type LoaderInterface interface {
 
 type Loader struct {
 	filename   string
-	data       []*DataPoint
 	startDate  time.Time
 	numEntries int
+	Data       []*DataPoint
 }
 
 type DataPoint struct {

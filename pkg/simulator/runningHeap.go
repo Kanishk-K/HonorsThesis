@@ -10,7 +10,7 @@ func (pq RunningHeap) Len() int {
 
 func (pq RunningHeap) Less(i, j int) bool {
 	// We want to return the lowest (starttime + duration) first
-	return pq[i].EndTime.Before(*pq[j].EndTime)
+	return pq[i].EndTime.Before(pq[j].EndTime)
 }
 
 func (pq RunningHeap) Swap(i, j int) {

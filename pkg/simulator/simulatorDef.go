@@ -22,7 +22,7 @@ type Simulator struct {
 	sloTimeouts            map[directory.AIModelDefinition]int
 	sloAccuracyRequirement float64
 
-	schedulingPolicy string
+	schedulingPolicy PolicyInterface
 
 	incomingJobs         WorkloadQueue // Jobs as they enter
 	queuedJobs           AwaitingHeap  // Jobs that are queued

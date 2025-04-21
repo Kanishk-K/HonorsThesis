@@ -53,16 +53,16 @@ func (l *Loader) loadFromFile() error {
 		return err
 	}
 	defer dataFile.Close()
-	if err := gocsv.UnmarshalFile(dataFile, &l.data); err != nil {
+	if err := gocsv.UnmarshalFile(dataFile, &l.Data); err != nil {
 		log.Println("Error unmarshalling file:", err)
 		return err
 	}
-	l.numEntries = len(l.data)
+	l.numEntries = len(l.Data)
 	if l.numEntries == 0 {
 		log.Println("No data found in file")
 		return fmt.Errorf("no data found in file")
 	}
-	l.startDate = l.data[0].StartDate
+	l.startDate = l.Data[0].StartDate
 	log.Println("Data loaded successfully, number of entries:", l.numEntries)
 	return nil
 }
@@ -75,21 +75,21 @@ func (l *Loader) PrintAllData() error {
 	if l.numEntries == 0 {
 		return fmt.Errorf("no data to print")
 	}
-	for _, dataPoint := range l.data {
+	for _, dataPoint := range l.Data {
 		fmt.Printf("StartDate: %s, CarbonIntensity: %f\n", dataPoint.StartDate.Format("2006-01-02 03:04 PM"), dataPoint.CarbonIntensity)
 	}
 	return nil
 }
 
-func (l *Loader) GetIntentsityByDate(date time.Time) (*DataPoint, error) {
+func (l *Loader) GetIndexByDate(date time.Time) (int, error) {
 	// Check if the loader is initialized
 	if l.numEntries == 0 {
-		return nil, fmt.Errorf("no data available")
+		return -1, fmt.Errorf("no data available")
 	}
 	// If the date is before the start date or after the last date in the data, return an error
 	// The last date is the start date of the last entry + 5 minutes
-	if date.Before(l.startDate) || date.After(l.data[l.numEntries-1].StartDate.Add(5*time.Minute)) {
-		return nil, fmt.Errorf("date out of range")
+	if date.Before(l.startDate) || date.After(l.Data[l.numEntries-1].StartDate.Add(5*time.Minute)) {
+		return -1, fmt.Errorf("date out of range")
 	}
 	// Entries are sorted by date we can binary search for the date
 	// We are NOT guarenteed that every date is present in the data
@@ -98,9 +98,9 @@ func (l *Loader) GetIntentsityByDate(date time.Time) (*DataPoint, error) {
 	left, right := 0, l.numEntries-1
 	for left <= right {
 		mid := (left + right) / 2
-		if l.data[mid].StartDate.Equal(date) {
-			return l.data[mid], nil
-		} else if l.data[mid].StartDate.Before(date) {
+		if l.Data[mid].StartDate.Equal(date) {
+			return mid, nil
+		} else if l.Data[mid].StartDate.Before(date) {
 			left = mid + 1
 		} else {
 			right = mid - 1
@@ -108,9 +108,9 @@ func (l *Loader) GetIntentsityByDate(date time.Time) (*DataPoint, error) {
 	}
 	// If we reach here, the date is not found, return the closest previous date
 	if right < 0 {
-		return nil, fmt.Errorf("no data found for date")
+		return -1, fmt.Errorf("no data found for date")
 	}
-	return l.data[right], nil
+	return right, nil
 }
 
 func (l *Loader) NumEntries() int {
@@ -125,5 +125,5 @@ func (l *Loader) EndDate() time.Time {
 	if l.numEntries == 0 {
 		return time.Time{}
 	}
-	return l.data[l.numEntries-1].StartDate.Add(5 * time.Minute)
+	return l.Data[l.numEntries-1].StartDate.Add(5 * time.Minute)
 }

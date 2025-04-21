@@ -13,7 +13,7 @@ import (
 var lock = &sync.Mutex{}
 var singleton *Simulator
 
-func NewSimulator(accuracyRequirement float64, workload []*workload.Job, schedulingPolicy string) *Simulator {
+func NewSimulator(accuracyRequirement float64, workload []*workload.Job, schedulingPolicy PolicyInterface) *Simulator {
 	if singleton == nil {
 		lock.Lock()
 		defer lock.Unlock()
@@ -103,19 +103,21 @@ func (s *Simulator) update() error {
 		nextTime := nextEvent.StartTime
 		log.Printf("Popped incoming job: %v\n", nextEvent)
 		s.carbonMeasure(nextTime)
-		nextEvent.EndTime = &nextEvent.StartTime
+		s.schedulingPolicy.HandleIncoming(nextEvent)
 		s.queuedJobs.Push(nextEvent) // TODO: ADD POLICY TO QUEUE JOBS
 	} else if origin == workload.QueuedJob {
 		nextEvent := s.queuedJobs.Pop().(*workload.Job)
 		nextTime := nextEvent.StartTime
 		log.Printf("Popped queued job: %v\n", nextEvent)
 		s.carbonMeasure(nextTime)
+		s.schedulingPolicy.HandleQueued(nextEvent)
 		s.currentlyRunningJobs.Push(nextEvent)
 	} else if origin == workload.RunningJob {
 		nextEvent := s.currentlyRunningJobs.Pop().(*workload.Job)
 		nextTime := nextEvent.StartTime
 		log.Printf("Popped running job: %v\n", nextEvent)
 		s.carbonMeasure(nextTime)
+		s.schedulingPolicy.HandleRunning(nextEvent)
 		s.completedJobs.Push(nextEvent)
 	} else {
 		return fmt.Errorf("unknown job origin: %v", origin)
@@ -132,10 +134,10 @@ func (s *Simulator) pickNextEvent() (*workload.Job, workload.JobOrigin) {
 	RJJob := s.currentlyRunningJobs.Peek()
 
 	// Compare the jobs and pick the one with the smallest time
-	if IJJob != nil && (AJJob == nil || IJJob.StartTime.Before(AJJob.StartTime)) && (RJJob == nil || IJJob.StartTime.Before(*RJJob.EndTime)) {
+	if IJJob != nil && (AJJob == nil || IJJob.StartTime.Before(AJJob.StartTime)) && (RJJob == nil || IJJob.StartTime.Before(RJJob.EndTime)) {
 		nextJob = IJJob
 		origin = workload.IncomingJob
-	} else if AJJob != nil && (RJJob == nil || AJJob.StartTime.Before(*RJJob.EndTime)) {
+	} else if AJJob != nil && (RJJob == nil || AJJob.StartTime.Before(RJJob.EndTime)) {
 		nextJob = AJJob
 		origin = workload.QueuedJob
 	} else if RJJob != nil {
@@ -148,7 +150,9 @@ func (s *Simulator) pickNextEvent() (*workload.Job, workload.JobOrigin) {
 
 func (s *Simulator) carbonMeasure(newTime time.Time) error {
 	// While loop until all complete jobs are processed
-	
+	for s.currentlyRunningJobs.Peek() != nil && s.currentlyRunningJobs.Peek().EndTime.Before(newTime) {
+
+	}
 	// Loop over remaining incomplete jobs and calculate carbon emissions
 
 	return nil

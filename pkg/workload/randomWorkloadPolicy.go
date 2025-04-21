@@ -30,7 +30,7 @@ func (rw *RandomWorkload) GenerateWorkload(jobInfo JobMetadata) ([]*Job, error) 
 			Model:     nil,
 			StartTime: startTime,
 			DueTime:   startTime.Add(jobInfo.DueTime),
-			EndTime:  nil,
+			EndTime:   startTime,
 		}
 		jobList[index] = job
 	}
