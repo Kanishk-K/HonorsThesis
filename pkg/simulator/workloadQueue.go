@@ -10,7 +10,7 @@ func (wq WorkloadQueue) Len() int {
 	return len(wq)
 }
 
-func (wq WorkloadQueue) Peak() *workload.Job {
+func (wq WorkloadQueue) Peek() *workload.Job {
 	if len(wq) == 0 {
 		return nil
 	}
@@ -24,4 +24,8 @@ func (wq *WorkloadQueue) Pop() *workload.Job {
 	job := (*wq)[0]
 	*wq = (*wq)[1:]
 	return job
+}
+
+func (wq *WorkloadQueue) Push(job *workload.Job) {
+	*wq = append(*wq, job)
 }

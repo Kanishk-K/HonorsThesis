@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"simulator/pkg/directory"
 	"simulator/pkg/loader"
+	"simulator/pkg/simulator"
 	"simulator/pkg/workload"
 	"time"
 )
@@ -35,7 +36,14 @@ func main() {
 	*/
 	jobInfo := workload.NewJobInfo(5*time.Minute, 100, "random")
 	workload := workload.GetWorkload(jobInfo)
-	for _, job := range workload.Jobs {
-		fmt.Printf("StartTime: %s, DueTime: %s\n", job.StartTime.Format(time.RFC3339), job.DueTime.Format(time.RFC3339))
+
+	simElement := simulator.NewSimulator(0.95, workload.Jobs, "FIFO")
+	if simElement == nil {
+		log.Println("Simulator not initialized. Exiting.")
+		return
 	}
+	log.Println(simElement)
+	simElement.Begin()
+	log.Println("Simulation complete.")
+	log.Println(simElement)
 }

@@ -40,7 +40,7 @@ func (uw *UniformWorkload) GenerateWorkload(jobInfo JobMetadata) ([]*Job, error)
 			Model:     nil,
 			StartTime: startTime,
 			DueTime:   startTime.Add(jobInfo.DueTime),
-			Duration:  nil,
+			EndTime:  nil,
 		}
 		jobList[index] = job
 	}

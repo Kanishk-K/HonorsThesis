@@ -49,7 +49,7 @@ func (ws *WeekdaySpikeWorkload) GenerateWorkload(jobInfo JobMetadata) ([]*Job, e
 			Model:     nil,
 			StartTime: startTime,
 			DueTime:   startTime.Add(jobInfo.DueTime),
-			Duration:  nil,
+			EndTime:   nil,
 		}
 	}
 	for i := range numOffSpike {
@@ -58,7 +58,7 @@ func (ws *WeekdaySpikeWorkload) GenerateWorkload(jobInfo JobMetadata) ([]*Job, e
 			Model:     nil,
 			StartTime: startTime,
 			DueTime:   startTime.Add(jobInfo.DueTime),
-			Duration:  nil,
+			EndTime:   nil,
 		}
 	}
 	slices.SortFunc(jobList, func(a, b *Job) int {

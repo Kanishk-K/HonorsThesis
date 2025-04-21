@@ -2,26 +2,26 @@ package simulator
 
 import "simulator/pkg/workload"
 
-type PriorityQueue []*workload.Job
+type RunningHeap []*workload.Job
 
-func (pq PriorityQueue) Len() int {
+func (pq RunningHeap) Len() int {
 	return len(pq)
 }
 
-func (pq PriorityQueue) Less(i, j int) bool {
+func (pq RunningHeap) Less(i, j int) bool {
 	// We want to return the lowest (starttime + duration) first
-	return pq[i].StartTime.Add(*pq[i].Duration).Before(pq[j].StartTime.Add(*pq[j].Duration))
+	return pq[i].EndTime.Before(*pq[j].EndTime)
 }
 
-func (pq PriorityQueue) Swap(i, j int) {
+func (pq RunningHeap) Swap(i, j int) {
 	pq[i], pq[j] = pq[j], pq[i]
 }
 
-func (pq *PriorityQueue) Push(x any) {
+func (pq *RunningHeap) Push(x any) {
 	*pq = append(*pq, x.(*workload.Job))
 }
 
-func (pq *PriorityQueue) Pop() any {
+func (pq *RunningHeap) Pop() any {
 	old := *pq
 	n := len(old)
 	x := old[n-1]
@@ -29,7 +29,7 @@ func (pq *PriorityQueue) Pop() any {
 	return x
 }
 
-func (pq *PriorityQueue) Peek() *workload.Job {
+func (pq *RunningHeap) Peek() *workload.Job {
 	if pq.Len() == 0 {
 		return nil
 	}

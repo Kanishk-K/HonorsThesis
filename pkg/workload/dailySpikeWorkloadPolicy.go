@@ -86,7 +86,7 @@ func (sp *SpikeWorkload) GenerateWorkload(jobInfo JobMetadata) ([]*Job, error) {
 			Model:     nil,
 			StartTime: startTime,
 			DueTime:   startTime.Add(jobInfo.DueTime),
-			Duration:  nil,
+			EndTime:   nil,
 		}
 		jobList[i] = job
 	}
@@ -98,7 +98,7 @@ func (sp *SpikeWorkload) GenerateWorkload(jobInfo JobMetadata) ([]*Job, error) {
 			Model:     nil,
 			StartTime: startTime,
 			DueTime:   startTime.Add(jobInfo.DueTime),
-			Duration:  nil,
+			EndTime:   nil,
 		}
 		jobList[numOnSpike+i] = job
 	}

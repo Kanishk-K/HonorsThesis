@@ -10,9 +10,9 @@ type LoaderInterface interface {
 	String() string
 	PrintAllData() error
 	GetIntentsityByDate(date time.Time) (float64, error)
-	GetNumEntries() int
-	GetStartDate() time.Time
-	GetEndDate() time.Time
+	NumEntries() int
+	StartDate() time.Time
+	EndDate() time.Time
 }
 
 type Loader struct {
