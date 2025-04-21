@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"simulator/pkg/directory"
 	"simulator/pkg/loader"
+	"slices"
 	"time"
 )
 
@@ -42,6 +43,9 @@ func (rw *RandomWorkload) GenerateWorkload(model *directory.AIModelDefinition) (
 		jobList[index] = job
 	}
 	// Sort jobs by start time
+	slices.SortFunc(jobList, func(a, b *Job) int {
+		return a.StartTime.Compare(b.StartTime)
+	})
 	return jobList, nil
 }
 

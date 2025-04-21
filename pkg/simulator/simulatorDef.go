@@ -13,7 +13,7 @@ type Simulator struct {
 	carbonEmission map[directory.AIModelDefinition]float64
 	sloViolations  map[directory.AIModelDefinition]int
 
-	incomingJobs         WorkloadQueue
-	readyQueue           PriorityQueue
-	currentlyRunningJobs PriorityQueue
+	incomingJobs         WorkloadQueue // Jobs as they enter
+	queuedJobs           PriorityQueue // Jobs that are queued
+	currentlyRunningJobs PriorityQueue // Jobs that are currently running
 }

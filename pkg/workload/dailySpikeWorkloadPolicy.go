@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"simulator/pkg/directory"
 	"simulator/pkg/loader"
+	"slices"
 	"time"
 )
 
@@ -112,5 +113,8 @@ func (sp *SpikeWorkload) GenerateWorkload(model *directory.AIModelDefinition) ([
 		}
 		jobList[numOnSpike+i] = job
 	}
+	slices.SortFunc(jobList, func(a, b *Job) int {
+		return a.StartTime.Compare(b.StartTime)
+	})
 	return jobList, nil
 }
