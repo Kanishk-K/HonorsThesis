@@ -35,7 +35,7 @@ func main() {
 	/*
 		Generate and load in workload information
 	*/
-	jobInfo := workload.NewJobInfo(5*time.Minute, 100, "random")
+	jobInfo := workload.NewJobInfo(5*time.Minute, 1000000, "random")
 	workload := workload.GetWorkload(jobInfo)
 
 	/*
