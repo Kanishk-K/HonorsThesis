@@ -73,7 +73,7 @@ class DataAquisitionBase(AbstractDataAquisition):
                 "resolution": "5m",
                 # Datetimes in ISO-8601 format (2022-01-07T00:00:00Z)
                 "start": date.isoformat() + "Z",
-                "end": (date + datetime.timedelta(days=1)).isoformat() + "Z",
+                "end": (date + datetime.timedelta(days=1) - datetime.timedelta(seconds=1)).isoformat() + "Z",
                 "region": self.ISO,
                 "source": "ISO",
                 "emission_factor_source": "EGRID"

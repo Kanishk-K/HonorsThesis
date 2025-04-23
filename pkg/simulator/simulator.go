@@ -15,7 +15,7 @@ import (
 var lock = &sync.Mutex{}
 var singleton *Simulator
 
-func NewSimulator(accuracyRequirement float64, workload []*workload.Job, schedulingPolicy PolicyInterface) *Simulator {
+func NewSimulator(workload []*workload.Job, schedulingPolicy PolicyInterface) *Simulator {
 	if singleton == nil {
 		lock.Lock()
 		defer lock.Unlock()
@@ -34,10 +34,9 @@ func NewSimulator(accuracyRequirement float64, workload []*workload.Job, schedul
 			runningJobHeap := make(RunningHeap, 0)
 			heap.Init(&runningJobHeap)
 			singleton = &Simulator{
-				currTime:               loader.StartDate(),
-				carbonEmission:         make(map[directory.AIModelDefinition]float64),
-				sloTimeouts:            make(map[directory.AIModelDefinition]int),
-				sloAccuracyRequirement: accuracyRequirement,
+				currTime:       loader.StartDate(),
+				carbonEmission: make(map[directory.AIModelDefinition]float64),
+				sloTimeouts:    make(map[directory.AIModelDefinition]int),
 
 				schedulingPolicy: schedulingPolicy,
 
@@ -61,7 +60,6 @@ func (s *Simulator) String() string {
 			"\tCurrent Time: %v\n"+
 			"\tCarbon Emission: %v\n"+
 			"\tSLO Timeouts: %v\n"+
-			"\tSLO Accuracy Requirement: %.2f\n"+
 			"\tScheduling Policy: %s\n"+
 			"\tIncoming Jobs Length: %d\n"+
 			"\tQueued Jobs: %v\n"+
@@ -70,7 +68,6 @@ func (s *Simulator) String() string {
 		s.currTime,
 		s.carbonEmission,
 		s.sloTimeouts,
-		s.sloAccuracyRequirement,
 		s.schedulingPolicy,
 		len(s.incomingJobs),
 		s.queuedJobs,
@@ -124,9 +121,9 @@ func (s *Simulator) update() error {
 		// Measure carbon emissions
 		s.carbonMeasure(nextTime)
 		// Policy assigns the job to be processed
-		log.Printf("Removed job from incoming jobs at time %v with due date %v. ", nextTime.Format(time.RFC3339), nextEvent.DueTime.Format(time.RFC3339))
+		log.Printf("[INCOMING] Removed job from incoming jobs at time %v with due date %v. ", nextTime.Format(time.RFC3339), nextEvent.DueTime.Format(time.RFC3339))
 		s.schedulingPolicy.HandleIncoming(nextEvent)
-		log.Printf("Model %s assigned with termination at time %v.\n", nextEvent.Model.ModelName, nextEvent.EndTime.Format(time.RFC3339))
+		log.Printf("[POLICY] Model %s assigned with start at time %v.\n", nextEvent.Model.ModelName, nextEvent.StartTime.Format(time.RFC3339))
 		s.queuedJobs.Push(nextEvent)
 	} else if origin == workload.QueuedJob {
 		// Fetch job from queued jobs
@@ -135,7 +132,7 @@ func (s *Simulator) update() error {
 		// Measure carbon emissions
 		s.carbonMeasure(nextTime)
 		// Policy is allowed to make modifications should it choose to
-		log.Printf("Removed job from queued jobs at time %v with due date %v. ", nextTime.Format(time.RFC3339), nextEvent.DueTime.Format(time.RFC3339))
+		log.Printf("[AWAITING] Removed job from queued jobs at time %v with completion date %v. ", nextTime.Format(time.RFC3339), nextEvent.EndTime.Format(time.RFC3339))
 		s.schedulingPolicy.HandleQueued(nextEvent)
 		// Add the job to the currently running jobs
 		s.currentlyRunningJobs.Push(nextEvent)
@@ -147,7 +144,7 @@ func (s *Simulator) update() error {
 		s.carbonMeasure(nextTime)
 		nextEvent = s.currentlyRunningJobs.Pop().(*workload.Job)
 		// Policy is allowed to make modifications should it choose to
-		log.Printf("Removed job from currently running jobs at time %v with due date %v. ", nextTime.Format(time.RFC3339), nextEvent.DueTime.Format(time.RFC3339))
+		log.Printf("[COMPLETE] Removed job from currently running jobs at time %v with due date %v. ", nextTime.Format(time.RFC3339), nextEvent.DueTime.Format(time.RFC3339))
 		s.schedulingPolicy.HandleRunning(nextEvent)
 		// Add the job to the completed jobs
 		s.completedJobs.Push(nextEvent)
@@ -232,7 +229,9 @@ func (s *Simulator) carbonMeasure(newTime time.Time) error {
 			currTime = newTime
 		}
 	}
+	if totalCarbon > 0 {
+		log.Printf("[EMISSION] Total carbon emission from %v to %v: %.2f gCO2\n", s.currTime.Format(time.RFC3339), newTime.Format(time.RFC3339), totalCarbon)
+	}
 	s.currTime = newTime
-	log.Printf("Total carbon emission from %v to %v: %.2f gCO2\n", s.currTime.Format(time.RFC3339), newTime.Format(time.RFC3339), totalCarbon)
 	return nil
 }

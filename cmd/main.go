@@ -22,7 +22,7 @@ func main() {
 	/*
 		Load in carbon emission data
 	*/
-	dataPath := filepath.Join(currDir, "..", "data", "collected", "MISO.csv")
+	dataPath := filepath.Join(currDir, "..", "data", "collected", "CAISO.csv")
 	dataLoader := loader.NewLoader(dataPath)
 	log.Println(dataLoader)
 
@@ -46,8 +46,8 @@ func main() {
 		log.Println("Error getting model definition:", err)
 		return
 	}
-	schedulingPolicy := policies.NewFIFO(model)
-	simElement := simulator.NewSimulator(0.95, workload.Jobs, schedulingPolicy)
+	schedulingPolicy := policies.NewTemporal(model)
+	simElement := simulator.NewSimulator(workload.Jobs, schedulingPolicy)
 	if simElement == nil {
 		log.Println("Simulator not initialized. Exiting.")
 		return
