@@ -46,7 +46,7 @@ func main() {
 		log.Println("Error getting model definition:", err)
 		return
 	}
-	schedulingPolicy := policies.NewTemporal(model)
+	schedulingPolicy := policies.NewFIFO(model)
 	simElement := simulator.NewSimulator(workload.Jobs, schedulingPolicy)
 	if simElement == nil {
 		log.Println("Simulator not initialized. Exiting.")

@@ -4,5 +4,17 @@
     "mean_run_time": 72,
     "std_dev_run_time": 5,
     "energy_usage": 5
+  },
+  "gpt-4": {
+    "model_name": "gpt-4",
+    "mean_run_time": 120,
+    "std_dev_run_time": 10,
+    "energy_usage": 10
+  },
+  "gpt-4.5": {
+    "model_name": "gpt-4.5",
+    "mean_run_time": 150,
+    "std_dev_run_time": 15,
+    "energy_usage": 15
   }
 }

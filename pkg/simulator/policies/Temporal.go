@@ -22,27 +22,45 @@ func NewTemporal(aiModel *directory.AIModelDefinition) Temporal {
 }
 
 func (t Temporal) HandleIncoming(job *workload.Job) error {
-	loader := loader.GetLoader()
-	if loader == nil {
-		return fmt.Errorf("loader is not initialized")
-	}
-	if loader.NumEntries() == 0 {
-		return fmt.Errorf("loader has no entries")
-	}
 	// Assign model job
 	job.Model = t.aiModel
-	currStartTime := job.StartTime
+	job.StartTime, _, _ = BestTemporalTime(job, *t.aiModel)
+	duration := max(t.aiModel.MeanRunTime+t.aiModel.StdDevRunTime*rand.NormFloat64(), 0)
+	job.EndTime = job.StartTime.Add(time.Duration(duration) * time.Second)
+	return nil
+}
 
-	bestTime := currStartTime
+func (t Temporal) HandleQueued(job *workload.Job) error {
+	return nil
+}
+
+func (t Temporal) HandleRunning(job *workload.Job) error {
+	return nil
+}
+
+func (t Temporal) String() string {
+	return fmt.Sprintf("Temporal with %s", t.aiModel.ModelName)
+}
+
+func BestTemporalTime(job *workload.Job, aiModel directory.AIModelDefinition) (time.Time, float64, error) {
+	loader := loader.GetLoader()
+	if loader == nil {
+		return time.Time{}, 0, fmt.Errorf("loader not initialized")
+	}
+	if loader.NumEntries() == 0 {
+		return time.Time{}, 0, fmt.Errorf("loader has no data")
+	}
+	currStartTime := job.StartTime
+	bestTime := job.StartTime
 	minCarbon := math.MaxFloat64
-	for currStartTime.Add(time.Duration(t.aiModel.MeanRunTime) * time.Second).Before(job.DueTime) {
+	for currStartTime.Add(time.Duration(aiModel.MeanRunTime) * time.Second).Before(job.DueTime) {
 		totalCarbon := 0.0
 		currTime := currStartTime
-		expectedEnd := currStartTime.Add(time.Duration(t.aiModel.MeanRunTime) * time.Second)
+		expectedEnd := currStartTime.Add(time.Duration(aiModel.MeanRunTime) * time.Second)
 		// Calculate carbon emissions for the current time
 		carbonIdx, err := loader.GetIndexByDate(currTime)
 		if err != nil {
-			return fmt.Errorf("error getting index by date: %w", err)
+			return time.Time{}, 0, fmt.Errorf("error getting index by date: %w", err)
 		}
 		for carbonIdx < loader.NumEntries()-1 && currTime.Before(expectedEnd) {
 			// Find the next time, smaller of either the nextEntry or the newTime
@@ -71,7 +89,7 @@ func (t Temporal) HandleIncoming(job *workload.Job) error {
 			totalCarbon += carbon
 		}
 		// If the carbon emissions are less than the minimum, update the best time and minimum carbon
-		log.Printf("[TEMPORAL PREDICT] For start time %s, total carbon is predicted %f", currStartTime.Format(time.RFC3339), totalCarbon)
+		log.Printf("[TEMPORAL PREDICT] For start time %s, total carbon is predicted %f gCO2", currStartTime.Format(time.RFC3339), totalCarbon)
 		if totalCarbon < minCarbon {
 			minCarbon = totalCarbon
 			bestTime = currStartTime
@@ -79,27 +97,12 @@ func (t Temporal) HandleIncoming(job *workload.Job) error {
 		// Move to the next time slot which is the next carbon index
 		nextTime, err := loader.GetIndexByDate(currStartTime)
 		if err != nil {
-			return fmt.Errorf("error getting index by date: %w", err)
+			return time.Time{}, 0, fmt.Errorf("error getting index by date: %w", err)
 		}
 		if nextTime >= loader.NumEntries()-1 {
 			break
 		}
 		currStartTime = loader.Data[nextTime+1].StartDate
 	}
-	job.StartTime = bestTime
-	duration := max(t.aiModel.MeanRunTime+t.aiModel.StdDevRunTime*rand.NormFloat64(), 0)
-	job.EndTime = job.StartTime.Add(time.Duration(duration) * time.Second)
-	return nil
-}
-
-func (t Temporal) HandleQueued(job *workload.Job) error {
-	return nil
-}
-
-func (t Temporal) HandleRunning(job *workload.Job) error {
-	return nil
-}
-
-func (t Temporal) String() string {
-	return fmt.Sprintf("Temporal with %s", t.aiModel.ModelName)
+	return bestTime, minCarbon, nil
 }
