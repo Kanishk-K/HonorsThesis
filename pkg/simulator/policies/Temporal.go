@@ -72,7 +72,7 @@ func BestTemporalTime(job *workload.Job, aiModel directory.AIModelDefinition) (t
 			timeDiff := nextTime.Sub(currTime).Seconds() // in seconds
 			// Calculate the carbon emission
 			carbonRate := loader.Data[carbonIdx].CarbonIntensity       // in kgCO2/MWh
-			modelRate := job.Model.EnergyUsage                         // in MW
+			modelRate := aiModel.EnergyUsage                           // in MW
 			carbon := timeDiff * modelRate * 3.6e-9 * 1e3 * carbonRate // in gCO2
 			// Update the carbon emission
 			totalCarbon += carbon
@@ -83,13 +83,13 @@ func BestTemporalTime(job *workload.Job, aiModel directory.AIModelDefinition) (t
 			// If the newTime is after all recorded data points, use the last entry as a heuristic
 			timeDiff := expectedEnd.Sub(loader.Data[loader.NumEntries()-1].StartDate).Seconds() // in seconds
 			carbonRate := loader.Data[loader.NumEntries()-1].CarbonIntensity                    // in kgCO2/MWh
-			modelRate := job.Model.EnergyUsage                                                  // in MW
+			modelRate := aiModel.EnergyUsage                                                    // in MW
 			carbon := timeDiff * modelRate * 3.6e-9 * 1e3 * carbonRate                          // in gCO2
 			// Update the carbon emission
 			totalCarbon += carbon
 		}
 		// If the carbon emissions are less than the minimum, update the best time and minimum carbon
-		log.Printf("[TEMPORAL PREDICT] For start time %s, total carbon is predicted %f gCO2", currStartTime.Format(time.RFC3339), totalCarbon)
+		log.Printf("[TEMPORAL PREDICT] For start time %s and model %s, total carbon is predicted %f gCO2", currStartTime.Format(time.RFC3339), aiModel.ModelName, totalCarbon)
 		if totalCarbon < minCarbon {
 			minCarbon = totalCarbon
 			bestTime = currStartTime
