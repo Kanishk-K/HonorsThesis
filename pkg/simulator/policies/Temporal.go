@@ -15,13 +15,13 @@ type Temporal struct {
 	aiModel *directory.AIModelDefinition
 }
 
-func NewTemporal(aiModel *directory.AIModelDefinition) Temporal {
-	return Temporal{
+func NewTemporal(aiModel *directory.AIModelDefinition) *Temporal {
+	return &Temporal{
 		aiModel: aiModel,
 	}
 }
 
-func (t Temporal) HandleIncoming(job *workload.Job) error {
+func (t *Temporal) HandleIncoming(job *workload.Job) error {
 	// Assign model job
 	job.Model = t.aiModel
 	job.StartTime, _, _ = BestTemporalTime(job, *t.aiModel)
@@ -30,15 +30,15 @@ func (t Temporal) HandleIncoming(job *workload.Job) error {
 	return nil
 }
 
-func (t Temporal) HandleQueued(job *workload.Job) error {
+func (t *Temporal) HandleQueued(job *workload.Job) error {
 	return nil
 }
 
-func (t Temporal) HandleRunning(job *workload.Job) error {
+func (t *Temporal) HandleRunning(job *workload.Job) error {
 	return nil
 }
 
-func (t Temporal) String() string {
+func (t *Temporal) String() string {
 	return fmt.Sprintf("Temporal with %s", t.aiModel.ModelName)
 }
 

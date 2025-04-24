@@ -30,7 +30,7 @@ func main() {
 		Load in AI Model Definitions & Workload information
 	*/
 	modelPath := filepath.Join(currDir, "..", "cmd", "AIModels.json")
-	modelDirectory := directory.NewDirectory(modelPath)
+	_ = directory.NewDirectory(modelPath)
 
 	/*
 		Generate and load in workload information
@@ -41,12 +41,12 @@ func main() {
 	/*
 		Initialize the simulator
 	*/
-	model, err := modelDirectory.GetModelDefinition("gpt-3.5-turbo")
-	if err != nil {
-		log.Println("Error getting model definition:", err)
-		return
-	}
-	schedulingPolicy := policies.NewFIFO(model)
+	// model, err := modelDirectory.GetModelDefinition("gpt-3.5-turbo")
+	// if err != nil {
+	// 	log.Println("Error getting model definition:", err)
+	// 	return
+	// }
+	schedulingPolicy := policies.NewModelSelection(0.8)
 	simElement := simulator.NewSimulator(workload.Jobs, schedulingPolicy)
 	if simElement == nil {
 		log.Println("Simulator not initialized. Exiting.")

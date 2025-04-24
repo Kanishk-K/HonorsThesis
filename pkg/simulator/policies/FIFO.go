@@ -14,13 +14,13 @@ type FIFO struct {
 	aiModel *directory.AIModelDefinition
 }
 
-func NewFIFO(aiModel *directory.AIModelDefinition) FIFO {
-	return FIFO{
+func NewFIFO(aiModel *directory.AIModelDefinition) *FIFO {
+	return &FIFO{
 		aiModel: aiModel,
 	}
 }
 
-func (f FIFO) HandleIncoming(job *workload.Job) error {
+func (f *FIFO) HandleIncoming(job *workload.Job) error {
 	job.Model = f.aiModel
 	_, err := CarbonEstimate(job, *f.aiModel)
 	if err != nil {
@@ -32,15 +32,15 @@ func (f FIFO) HandleIncoming(job *workload.Job) error {
 	return nil
 }
 
-func (f FIFO) HandleQueued(job *workload.Job) error {
+func (f *FIFO) HandleQueued(job *workload.Job) error {
 	return nil
 }
 
-func (f FIFO) HandleRunning(job *workload.Job) error {
+func (f *FIFO) HandleRunning(job *workload.Job) error {
 	return nil
 }
 
-func (f FIFO) String() string {
+func (f *FIFO) String() string {
 	return fmt.Sprintf("FIFO with %s", f.aiModel.ModelName)
 }
 
@@ -69,7 +69,7 @@ func CarbonEstimate(job *workload.Job, aiModel directory.AIModelDefinition) (flo
 		timeDiff := nextTime.Sub(currTime).Seconds() // in seconds
 		// Calculate the carbon emission
 		carbonRate := loader.Data[carbonIdx].CarbonIntensity       // in kgCO2/MWh
-		modelRate := job.Model.EnergyUsage                         // in MW
+		modelRate := aiModel.EnergyUsage                           // in MW
 		carbon := timeDiff * modelRate * 3.6e-9 * 1e3 * carbonRate // in gCO2
 		// Update the carbon emission
 		totalCarbon += carbon
@@ -80,11 +80,11 @@ func CarbonEstimate(job *workload.Job, aiModel directory.AIModelDefinition) (flo
 		// If the newTime is after all recorded data points, use the last entry as a heuristic
 		timeDiff := expectedEnd.Sub(loader.Data[loader.NumEntries()-1].StartDate).Seconds() // in seconds
 		carbonRate := loader.Data[loader.NumEntries()-1].CarbonIntensity                    // in kgCO2/MWh
-		modelRate := job.Model.EnergyUsage                                                  // in MW
+		modelRate := aiModel.EnergyUsage                                                    // in MW
 		carbon := timeDiff * modelRate * 3.6e-9 * 1e3 * carbonRate                          // in gCO2
 		// Update the carbon emission
 		totalCarbon += carbon
 	}
-	log.Printf("[FIFO PREDICT] For start time %s, total carbon is predicted %f gCO2", job.StartTime.Format(time.RFC3339), totalCarbon)
+	log.Printf("[FIFO PREDICT] For start time %s and model %s, total carbon is predicted %f gCO2", job.StartTime.Format(time.RFC3339), aiModel.ModelName, totalCarbon)
 	return totalCarbon, nil
 }

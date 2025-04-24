@@ -20,4 +20,5 @@ type AIModelDefinition struct {
 	StdDevRunTime float64 `json:"std_dev_run_time"` // in seconds
 	EnergyUsage   float64 `json:"energy_usage"`     // in MW
 	SLOThreshold  float64 `json:"slo_threshold"`    // in seconds
+	Accuracy      float64 `json:"accuracy"`         // in percentage
 }

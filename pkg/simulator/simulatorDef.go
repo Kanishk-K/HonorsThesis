@@ -17,10 +17,9 @@ type SimulatorInterface interface {
 }
 
 type Simulator struct {
-	currTime               time.Time
-	carbonEmission         map[directory.AIModelDefinition]float64
-	sloTimeouts            map[directory.AIModelDefinition]int
-	sloAccuracyRequirement float64
+	currTime       time.Time
+	carbonEmission map[directory.AIModelDefinition]float64
+	sloTimeouts    map[directory.AIModelDefinition]int
 
 	schedulingPolicy PolicyInterface
 
