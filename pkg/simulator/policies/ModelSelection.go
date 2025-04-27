@@ -35,10 +35,7 @@ func (m *ModelSelection) HandleIncoming(job *workload.Job) error {
 	for _, model := range models {
 		newAccuracy := (m.currTotalAccuracy + model.Accuracy) / float64(m.processedJobs+1)
 		if newAccuracy >= m.requiredAccuracy {
-			carbonEstimate, err := CarbonEstimate(job, model)
-			if err != nil {
-				return fmt.Errorf("error estimating carbon: %w", err)
-			}
+			carbonEstimate := FIFOCarbonEstimate(job, &model)
 			if carbonEstimate <= bestCarbon && model.Accuracy >= bestAccuracy {
 				bestCarbon = carbonEstimate
 				bestAccuracy = model.Accuracy

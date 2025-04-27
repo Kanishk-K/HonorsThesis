@@ -36,7 +36,7 @@ func (h *HybridSelection) HandleIncoming(job *workload.Job) error {
 	for _, model := range models {
 		newAccuracy := (h.currTotalAccuracy + model.Accuracy) / float64(h.processedJobs+1)
 		if newAccuracy >= h.requiredAccuracy {
-			startTime, carbonEstimate, err := BestTemporalTime(job, model)
+			startTime, carbonEstimate, err := TemporalCarbonEstimate(job, &model)
 			if err != nil {
 				return fmt.Errorf("error estimating carbon: %w", err)
 			}

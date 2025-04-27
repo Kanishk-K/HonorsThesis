@@ -24,8 +24,8 @@ func (pq *AwaitingHeap) Push(x any) {
 func (pq *AwaitingHeap) Pop() any {
 	old := *pq
 	n := len(old)
-	x := old[n-1]
-	*pq = old[0 : n-1]
+	x := old[0]
+	*pq = old[1:n]
 	return x
 }
 

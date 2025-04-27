@@ -7,6 +7,7 @@ import (
 	"os"
 	"simulator/pkg/directory"
 	"simulator/pkg/loader"
+	"simulator/pkg/simulator/policies"
 	"simulator/pkg/workload"
 	"sync"
 	"time"
@@ -117,41 +118,37 @@ func (s *Simulator) update() error {
 	if origin == workload.IncomingJob {
 		// Fetch job from incoming jobs
 		nextEvent := s.incomingJobs.Pop()
-		nextTime := nextEvent.StartTime
-		// Measure carbon emissions
-		s.carbonMeasure(nextTime)
+		s.currTime = nextEvent.StartTime
 		// Policy assigns the job to be processed
-		log.Printf("[INCOMING] Removed job from incoming jobs at time %v with due date %v. ", nextTime.Format(time.RFC3339), nextEvent.DueTime.Format(time.RFC3339))
+		log.Printf("[INCOMING] Process requested at time %v with due date %v. ", s.currTime.Format(time.ANSIC), nextEvent.DueTime.Format(time.ANSIC))
 		s.schedulingPolicy.HandleIncoming(nextEvent)
-		log.Printf("[POLICY] Model %s assigned with start at time %v.\n", nextEvent.Model.ModelName, nextEvent.StartTime.Format(time.RFC3339))
-		s.queuedJobs.Push(nextEvent)
+		log.Printf("[POLICY] Model %s assigned with start at time %v, true end %v.\n", nextEvent.Model.ModelName, nextEvent.StartTime.Format(time.ANSIC), nextEvent.EndTime.Format(time.ANSIC))
+		heap.Push(&s.queuedJobs, nextEvent)
 	} else if origin == workload.QueuedJob {
 		// Fetch job from queued jobs
-		nextEvent := s.queuedJobs.Pop().(*workload.Job)
-		nextTime := nextEvent.StartTime
-		// Measure carbon emissions
-		s.carbonMeasure(nextTime)
+		nextEvent := heap.Pop(&s.queuedJobs).(*workload.Job)
+		s.currTime = nextEvent.StartTime
 		// Policy is allowed to make modifications should it choose to
-		log.Printf("[AWAITING] Removed job from queued jobs at time %v with completion date %v. ", nextTime.Format(time.RFC3339), nextEvent.EndTime.Format(time.RFC3339))
+		log.Printf("[AWAITING] Job begins processing at time %v, will complete by %v ", s.currTime.Format(time.ANSIC), nextEvent.EndTime.Format(time.ANSIC))
 		s.schedulingPolicy.HandleQueued(nextEvent)
 		// Add the job to the currently running jobs
-		s.currentlyRunningJobs.Push(nextEvent)
+		heap.Push(&s.currentlyRunningJobs, nextEvent)
 	} else if origin == workload.RunningJob {
 		// Fetch job from currently running jobs
-		nextEvent := s.currentlyRunningJobs.Peek()
-		nextTime := nextEvent.EndTime
+		nextEvent := heap.Pop(&s.currentlyRunningJobs).(*workload.Job)
+		s.currTime = nextEvent.EndTime
 		// Measure carbon emissions
-		s.carbonMeasure(nextTime)
-		nextEvent = s.currentlyRunningJobs.Pop().(*workload.Job)
+		s.carbonMeasure(nextEvent)
 		// Policy is allowed to make modifications should it choose to
-		log.Printf("[COMPLETE] Removed job from currently running jobs at time %v with due date %v. ", nextTime.Format(time.RFC3339), nextEvent.DueTime.Format(time.RFC3339))
+		log.Printf("[COMPLETE] Job completed at %v", s.currTime.Format(time.ANSIC))
 		s.schedulingPolicy.HandleRunning(nextEvent)
 		// Add the job to the completed jobs
 		s.completedJobs.Push(nextEvent)
 		// Validate that the job hasn't violated the SLO
-		if nextEvent.DueTime.Before(nextTime) {
+		if nextEvent.DueTime.Before(nextJob.EndTime) {
 			// SLO violation
 			s.sloTimeouts[*nextEvent.Model]++
+			log.Printf("[SLO VIOLATION] Job %s with start time %v and end time %v. SLO violated. ", nextEvent.Model.ModelName, nextEvent.StartTime.Format(time.ANSIC), nextEvent.EndTime.Format(time.ANSIC))
 		}
 	} else {
 		return fmt.Errorf("unknown job origin: %v", origin)
@@ -182,56 +179,9 @@ func (s *Simulator) pickNextEvent() (*workload.Job, workload.JobOrigin) {
 	return nextJob, origin
 }
 
-func (s *Simulator) carbonMeasure(newTime time.Time) error {
-	// newTime is always less than or equal to the end time of the runningQueue
-	loader := loader.GetLoader()
-	if loader == nil {
-		return fmt.Errorf("loader not initialized")
-	}
-	if loader.NumEntries() == 0 {
-		return fmt.Errorf("loader has no data")
-	}
-	totalCarbon := 0.0
-	for _, job := range s.currentlyRunningJobs {
-		carbonIdx, err := loader.GetIndexByDate(s.currTime)
-		if err != nil {
-			return fmt.Errorf("error getting index by date: %w", err)
-		}
-		currTime := s.currTime
-		// Iterate until there are no more data points or the newTime is reached
-		for carbonIdx < loader.NumEntries()-1 && currTime.Before(newTime) {
-			// Find the next time, smaller of either the nextEntry or the newTime
-			nextTime := loader.Data[carbonIdx+1].StartDate
-			if nextTime.After(newTime) {
-				nextTime = newTime
-			}
-			// Calculate the time difference
-			timeDiff := nextTime.Sub(currTime).Seconds() // in seconds
-			// Calculate the carbon emission
-			carbonRate := loader.Data[carbonIdx].CarbonIntensity       // in kgCO2/MWh
-			modelRate := job.Model.EnergyUsage                         // in MW
-			carbon := timeDiff * modelRate * 3.6e-9 * 1e3 * carbonRate // in gCO2
-			// Update the carbon emission
-			s.carbonEmission[*job.Model] += carbon
-			totalCarbon += carbon
-			currTime = nextTime
-			carbonIdx++
-		}
-		if newTime.After(loader.EndDate()) {
-			// If the newTime is after all recorded data points, use the last entry as a heuristic
-			timeDiff := newTime.Sub(loader.Data[loader.NumEntries()-1].StartDate).Seconds() // in seconds
-			carbonRate := loader.Data[loader.NumEntries()-1].CarbonIntensity                // in kgCO2/MWh
-			modelRate := job.Model.EnergyUsage                                              // in MW
-			carbon := timeDiff * modelRate * 3.6e-9 * 1e3 * carbonRate                      // in gCO2
-			// Update the carbon emission
-			s.carbonEmission[*job.Model] += carbon
-			totalCarbon += carbon
-			currTime = newTime
-		}
-	}
-	if totalCarbon > 0 {
-		log.Printf("[EMISSION] Total carbon emission from %v to %v: %.2f gCO2\n", s.currTime.Format(time.RFC3339), newTime.Format(time.RFC3339), totalCarbon)
-	}
-	s.currTime = newTime
+func (s *Simulator) carbonMeasure(job *workload.Job) error {
+	totalCarbon := policies.CarbonCalculate(job.StartTime, job.EndTime, job.Model)
+	log.Printf("[EMISSION] Job %s with start time %v and end time %v. Carbon released %f gCO2. ", job.Model.ModelName, job.StartTime.Format(time.ANSIC), job.EndTime.Format(time.ANSIC), totalCarbon)
+	s.carbonEmission[*job.Model] += totalCarbon
 	return nil
 }

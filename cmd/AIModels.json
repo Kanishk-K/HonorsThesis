@@ -1,23 +1,23 @@
 {
-  "gpt-3.5-turbo": {
-    "model_name": "gpt-3.5-turbo",
-    "mean_run_time": 72,
-    "std_dev_run_time": 5,
+  "small": {
+    "model_name": "small",
+    "mean_run_time": 120,
+    "std_dev_run_time": 20,
     "energy_usage": 5,
     "accuracy": 0.5
   },
-  "gpt-4": {
-    "model_name": "gpt-4",
-    "mean_run_time": 120,
-    "std_dev_run_time": 10,
+  "medium": {
+    "model_name": "medium",
+    "mean_run_time": 240,
+    "std_dev_run_time": 40,
     "energy_usage": 10,
     "accuracy": 0.75
   },
-  "gpt-4.5": {
-    "model_name": "gpt-4.5",
-    "mean_run_time": 150,
-    "std_dev_run_time": 15,
-    "energy_usage": 15,
-    "accuracy": 0.95
+  "large": {
+    "model_name": "large",
+    "mean_run_time": 480,
+    "std_dev_run_time": 80,
+    "energy_usage": 20,
+    "accuracy": 1.0
   }
 }
