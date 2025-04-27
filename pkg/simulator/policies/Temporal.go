@@ -11,24 +11,26 @@ import (
 )
 
 type Temporal struct {
-	aiModel *directory.AIModelDefinition
+	aiModel     *directory.AIModelDefinition
+	safeguardSD float64
 }
 
-func NewTemporal(aiModel *directory.AIModelDefinition) *Temporal {
+func NewTemporal(aiModel *directory.AIModelDefinition, safeguardSD float64) *Temporal {
 	return &Temporal{
-		aiModel: aiModel,
+		aiModel:     aiModel,
+		safeguardSD: safeguardSD,
 	}
 }
 
 func (t *Temporal) HandleIncoming(job *workload.Job) error {
 	// Assign model job
 	job.Model = t.aiModel
-	bestTime, carbonPredict, _ := TemporalCarbonEstimate(job, t.aiModel)
+	bestTime, carbonPredict, _ := TemporalCarbonEstimate(job, t.aiModel, t.safeguardSD)
 	if !bestTime.Equal(job.StartTime) {
-		estimatedEnd := bestTime.Add(time.Duration(t.aiModel.MeanRunTime) * time.Second)
+		estimatedEnd := bestTime.Add(time.Duration(t.aiModel.MeanRunTime) * time.Second).Add(time.Duration(t.aiModel.StdDevRunTime*t.safeguardSD) * time.Second)
 		log.Printf("[TEMPORAL SHIFT PREDICT] For start time %s, estimated end %s, and model %s, total carbon is predicted %f gCO2", bestTime.Format(time.ANSIC), estimatedEnd.Format(time.ANSIC), t.aiModel.ModelName, carbonPredict)
 	} else {
-		estimatedEnd := job.StartTime.Add(time.Duration(t.aiModel.MeanRunTime) * time.Second)
+		estimatedEnd := job.StartTime.Add(time.Duration(t.aiModel.MeanRunTime) * time.Second).Add(time.Duration(t.aiModel.StdDevRunTime*t.safeguardSD) * time.Second)
 		log.Printf("[TEMPORAL NO CHANGE PREDICT] For start time %s, estimated end %s, and model %s, total carbon is predicted %f gCO2", job.StartTime.Format(time.ANSIC), estimatedEnd.Format(time.ANSIC), t.aiModel.ModelName, carbonPredict)
 	}
 	job.StartTime = bestTime
@@ -46,10 +48,10 @@ func (t *Temporal) HandleRunning(job *workload.Job) error {
 }
 
 func (t *Temporal) String() string {
-	return fmt.Sprintf("Temporal with %s", t.aiModel.ModelName)
+	return fmt.Sprintf("Temporal with %s and Standard Deviation Guard: %f", t.aiModel.ModelName, t.safeguardSD)
 }
 
-func TemporalCarbonEstimate(job *workload.Job, aiModel *directory.AIModelDefinition) (time.Time, float64, error) {
+func TemporalCarbonEstimate(job *workload.Job, aiModel *directory.AIModelDefinition, safeguardSD float64) (time.Time, float64, error) {
 	loader := loader.GetLoader()
 	if loader == nil {
 		return time.Time{}, 0, fmt.Errorf("loader not initialized")
@@ -60,7 +62,7 @@ func TemporalCarbonEstimate(job *workload.Job, aiModel *directory.AIModelDefinit
 	// Default values should there not be space to temporally shift
 	bestTime := job.StartTime
 	currTime := job.StartTime
-	currEnd := job.StartTime.Add(time.Duration(aiModel.MeanRunTime) * time.Second)
+	currEnd := job.StartTime.Add(time.Duration(aiModel.MeanRunTime) * time.Second).Add(time.Duration(aiModel.StdDevRunTime*safeguardSD) * time.Second)
 	minCarbon := CarbonCalculate(job.StartTime, currEnd, aiModel)
 
 	for currEnd.Before(loader.EndDate()) && currEnd.Before(job.DueTime) {
@@ -79,7 +81,7 @@ func TemporalCarbonEstimate(job *workload.Job, aiModel *directory.AIModelDefinit
 			bestTime = currTime
 		}
 		currTime = loader.Data[carbonIdx+1].StartDate
-		currEnd = currTime.Add(time.Duration(aiModel.MeanRunTime) * time.Second)
+		currEnd = currTime.Add(time.Duration(aiModel.MeanRunTime) * time.Second).Add(time.Duration(aiModel.StdDevRunTime*safeguardSD) * time.Second)
 	}
 
 	return bestTime, minCarbon, nil

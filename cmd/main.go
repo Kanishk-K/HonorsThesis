@@ -35,18 +35,18 @@ func main() {
 	/*
 		Generate and load in workload information
 	*/
-	jobInfo := workload.NewJobInfo(6*time.Hour, 1000000, "random")
+	jobInfo := workload.NewJobInfo(6*time.Hour, 100, "random")
 	workload := workload.GetWorkload(jobInfo)
 
 	/*
 		Initialize the simulator
 	*/
-	model, err := modelDirectory.GetModelDefinition("small")
+	_, err = modelDirectory.GetModelDefinition("small")
 	if err != nil {
 		log.Println("Error getting model definition:", err)
 		return
 	}
-	schedulingPolicy := policies.NewTemporal(model)
+	schedulingPolicy := policies.NewHybridSelection(0.5, 0)
 	simElement := simulator.NewSimulator(workload.Jobs, schedulingPolicy)
 	if simElement == nil {
 		log.Println("Simulator not initialized. Exiting.")

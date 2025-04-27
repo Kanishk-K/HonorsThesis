@@ -11,13 +11,15 @@ import (
 
 type HybridSelection struct {
 	requiredAccuracy  float64
+	safeguardSD       float64
 	currTotalAccuracy float64
 	processedJobs     int
 }
 
-func NewHybridSelection(requiredAccuracy float64) *HybridSelection {
+func NewHybridSelection(requiredAccuracy float64, safeguardSD float64) *HybridSelection {
 	return &HybridSelection{
 		requiredAccuracy:  requiredAccuracy,
+		safeguardSD:       safeguardSD,
 		currTotalAccuracy: 0,
 		processedJobs:     0,
 	}
@@ -36,7 +38,7 @@ func (h *HybridSelection) HandleIncoming(job *workload.Job) error {
 	for _, model := range models {
 		newAccuracy := (h.currTotalAccuracy + model.Accuracy) / float64(h.processedJobs+1)
 		if newAccuracy >= h.requiredAccuracy {
-			startTime, carbonEstimate, err := TemporalCarbonEstimate(job, &model)
+			startTime, carbonEstimate, err := TemporalCarbonEstimate(job, &model, h.safeguardSD)
 			if err != nil {
 				return fmt.Errorf("error estimating carbon: %w", err)
 			}
