@@ -22,7 +22,7 @@ func main() {
 	/*
 		Load in carbon emission data
 	*/
-	dataPath := filepath.Join(currDir, "..", "data", "collected", "CAISO.csv")
+	dataPath := filepath.Join(currDir, "..", "data", "collected", "ERCOT.csv")
 	dataLoader := loader.NewLoader(dataPath)
 	log.Println(dataLoader)
 
@@ -35,18 +35,18 @@ func main() {
 	/*
 		Generate and load in workload information
 	*/
-	jobInfo := workload.NewJobInfo(6*time.Hour, 100, "random")
+	jobInfo := workload.NewJobInfo(6*time.Hour, 1000000, "random")
 	workload := workload.GetWorkload(jobInfo)
 
 	/*
 		Initialize the simulator
 	*/
-	_, err = modelDirectory.GetModelDefinition("small")
+	model, err := modelDirectory.GetModelDefinition("small")
 	if err != nil {
 		log.Println("Error getting model definition:", err)
 		return
 	}
-	schedulingPolicy := policies.NewHybridSelection(0.5, 0)
+	schedulingPolicy := policies.NewTemporal(model, 0)
 	simElement := simulator.NewSimulator(workload.Jobs, schedulingPolicy)
 	if simElement == nil {
 		log.Println("Simulator not initialized. Exiting.")

@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"simulator/pkg/directory"
 	"simulator/pkg/workload"
+	"sync"
 	"time"
 )
 
@@ -13,6 +14,11 @@ type ModelSelection struct {
 	requiredAccuracy  float64
 	currTotalAccuracy float64
 	processedJobs     int
+}
+
+type ModelSelectionEstimate struct {
+	CarbonEstimate float64
+	Model          *directory.AIModelDefinition
 }
 
 func NewModelSelection(requiredAccuracy float64) *ModelSelection {
@@ -30,22 +36,45 @@ func (m *ModelSelection) HandleIncoming(job *workload.Job) error {
 	}
 	models := modelDirectory.GetModels()
 	var selectedModel *directory.AIModelDefinition
-	bestCarbon := math.MaxFloat64
-	bestAccuracy := 0.0
+	arrayLen := 0
+	var wg sync.WaitGroup
 	for _, model := range models {
 		newAccuracy := (m.currTotalAccuracy + model.Accuracy) / float64(m.processedJobs+1)
 		if newAccuracy >= m.requiredAccuracy {
-			carbonEstimate := FIFOCarbonEstimate(job, &model)
-			if carbonEstimate <= bestCarbon && model.Accuracy >= bestAccuracy {
-				bestCarbon = carbonEstimate
-				bestAccuracy = model.Accuracy
-				selectedModel = &model
-			}
+			arrayLen++
 		}
 	}
-	if selectedModel == nil {
+	if arrayLen == 0 {
 		return fmt.Errorf("no model found that meets the required accuracy, there is likely no model with an accuracy >= to the required accuracy")
 	}
+	wg.Add(arrayLen)
+	array := make([]ModelSelectionEstimate, arrayLen)
+	i := 0
+	for _, model := range models {
+		newAccuracy := (m.currTotalAccuracy + model.Accuracy) / float64(m.processedJobs+1)
+		if newAccuracy >= m.requiredAccuracy {
+			go func(index int, model *directory.AIModelDefinition) {
+				defer wg.Done()
+				carbonEstimate := FIFOCarbonEstimate(job, model)
+				array[index] = ModelSelectionEstimate{
+					CarbonEstimate: carbonEstimate,
+					Model:          model,
+				}
+			}(i, &model)
+			i += 1
+		}
+	}
+	wg.Wait()
+	bestCarbon := math.MaxFloat64
+	bestAccuracy := math.MaxFloat64
+	for _, estimate := range array {
+		if estimate.CarbonEstimate <= bestCarbon && estimate.Model.Accuracy <= bestAccuracy {
+			bestCarbon = estimate.CarbonEstimate
+			bestAccuracy = estimate.Model.Accuracy
+			selectedModel = estimate.Model
+		}
+	}
+
 	job.Model = selectedModel
 	duration := max(selectedModel.MeanRunTime+selectedModel.StdDevRunTime*rand.NormFloat64(), 0)
 	job.EndTime = job.StartTime.Add(time.Duration(duration) * time.Second)

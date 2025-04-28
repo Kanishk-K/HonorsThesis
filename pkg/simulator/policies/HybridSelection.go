@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"simulator/pkg/directory"
 	"simulator/pkg/workload"
+	"sync"
 	"time"
 )
 
@@ -14,6 +15,12 @@ type HybridSelection struct {
 	safeguardSD       float64
 	currTotalAccuracy float64
 	processedJobs     int
+}
+
+type HybridSelectionEstimate struct {
+	BestStartTime  time.Time
+	CarbonEstimate float64
+	Model          *directory.AIModelDefinition
 }
 
 func NewHybridSelection(requiredAccuracy float64, safeguardSD float64) *HybridSelection {
@@ -32,26 +39,49 @@ func (h *HybridSelection) HandleIncoming(job *workload.Job) error {
 	}
 	models := modelDirectory.GetModels()
 	var selectedModel *directory.AIModelDefinition
-	bestStartTime := job.StartTime
-	bestCarbon := math.MaxFloat64
-	bestAccuracy := 0.0
+	arrayLen := 0
+	var wg sync.WaitGroup
 	for _, model := range models {
 		newAccuracy := (h.currTotalAccuracy + model.Accuracy) / float64(h.processedJobs+1)
 		if newAccuracy >= h.requiredAccuracy {
-			startTime, carbonEstimate, err := TemporalCarbonEstimate(job, &model, h.safeguardSD)
-			if err != nil {
-				return fmt.Errorf("error estimating carbon: %w", err)
-			}
-			if carbonEstimate <= bestCarbon && model.Accuracy >= bestAccuracy {
-				bestCarbon = carbonEstimate
-				bestAccuracy = model.Accuracy
-				bestStartTime = startTime
-				selectedModel = &model
-			}
+			arrayLen++
 		}
 	}
-	if selectedModel == nil {
+	if arrayLen == 0 {
 		return fmt.Errorf("no model found that meets the required accuracy, there is likely no model with an accuracy >= to the required accuracy")
+	}
+	wg.Add(arrayLen)
+	array := make([]HybridSelectionEstimate, arrayLen)
+	i := 0
+	for _, model := range models {
+		newAccuracy := (h.currTotalAccuracy + model.Accuracy) / float64(h.processedJobs+1)
+		if newAccuracy >= h.requiredAccuracy {
+			go func(index int, model *directory.AIModelDefinition) {
+				defer wg.Done()
+				bestTime, carbonEstimate, err := TemporalCarbonEstimate(job, model, h.safeguardSD)
+				if err != nil {
+					panic(err)
+				}
+				array[index] = HybridSelectionEstimate{
+					BestStartTime:  bestTime,
+					CarbonEstimate: carbonEstimate,
+					Model:          model,
+				}
+			}(i, &model)
+			i += 1
+		}
+	}
+	wg.Wait()
+	bestStartTime := job.StartTime
+	bestCarbon := math.MaxFloat64
+	bestAccuracy := math.MaxFloat64
+	for _, estimate := range array {
+		if estimate.CarbonEstimate <= bestCarbon && estimate.Model.Accuracy <= bestAccuracy {
+			bestStartTime = estimate.BestStartTime
+			bestCarbon = estimate.CarbonEstimate
+			bestAccuracy = estimate.Model.Accuracy
+			selectedModel = estimate.Model
+		}
 	}
 	job.Model = selectedModel
 	job.StartTime = bestStartTime
