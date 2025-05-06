@@ -31,6 +31,8 @@ func chooseRegion() string {
 
 func chooseSLO() time.Duration {
 	switch os.Args[2] {
+	case "30min":
+		return 30 * time.Minute
 	case "1hr":
 		return 1 * time.Hour
 	case "6hr":
